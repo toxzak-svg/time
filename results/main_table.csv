@@ -1,0 +1,5 @@
+system,TemporalAccuracy,StalenessErrorRate,ChangeDetectionF1,CausalTraceAccuracy,TRS
+A,0.059,0.941,0.0,0.0,0.0384
+B,1.0,0.0,0.0,0.0,0.65
+C,1.0,0.0,0.0,0.0,0.65
+D,1.0,0.0,0.0,0.0,0.65
