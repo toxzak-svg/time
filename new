@@ -1,0 +1,1884 @@
+## Research Evolution System
+
+This is the version that stops being a normal experiment runner and starts acting like an **automated research population**.
+
+The idea is simple:
+
+* each experiment is treated like an organism
+* good experiments survive
+* weak experiments die
+* strong experiments mutate and reproduce
+* the system gradually discovers better research directions
+
+This is much more powerful than a hand-designed loop because it searches **families of ideas**, not just single ideas.
+
+---
+
+# 1. Core Concept
+
+Instead of:
+
+```text
+generate idea → run experiment → keep or discard
+```
+
+you build:
+
+```text
+population of experiments
+        ↓
+evaluate fitness
+        ↓
+select top performers
+        ↓
+mutate / recombine
+        ↓
+spawn next generation
+        ↓
+repeat
+```
+
+This is basically **evolutionary search for research pipelines**.
+
+---
+
+# 2. What an “Experiment Genome” Looks Like
+
+Each experiment needs a machine-readable genome.
+
+Example:
+
+```yaml
+id: exp_1042
+
+genome:
+  task_family: reasoning
+  base_model: qwen_1_7b
+  dataset_strategy: synthetic_filtered
+  data_generator_temperature: 0.8
+  critique_model: enabled
+  critique_threshold: 0.72
+  training_objective: sft
+  learning_rate: 2e-5
+  batch_size: 16
+  sequence_length: 2048
+  training_steps: 1200
+  eval_suite: gsm8k_fast
+  selection_metric: accuracy_minus_cost
+```
+
+This genome defines the full experimental recipe.
+
+The system mutates the recipe, not just a few hyperparameters.
+
+---
+
+# 3. Units of Evolution
+
+The most important decision is: **what is allowed to evolve?**
+
+Start with 5 classes of evolvable traits:
+
+### A. Data traits
+
+* synthetic vs real data
+* filtering strategy
+* curriculum order
+* prompt template
+* difficulty distribution
+
+### B. Training traits
+
+* learning rate
+* optimizer
+* steps
+* batch size
+* loss weighting
+
+### C. Model traits
+
+* base model choice
+* adapter type
+* rank
+* layer targeting
+* quantization mode
+
+### D. Evaluation traits
+
+* benchmark subset
+* proxy metric
+* pass thresholds
+* verifier strictness
+
+### E. Pipeline traits
+
+* whether critique is used
+* whether self-distillation is used
+* whether retrieval is used
+* whether multiple rounds are used
+* whether rejection sampling is used
+
+That is where the search becomes powerful: it evolves **whole methods**, not isolated knobs.
+
+---
+
+# 4. Population Structure
+
+Use a fixed-size population.
+
+Example:
+
+```text
+Population size: 200
+Elite survivors per generation: 20
+Mutated children: 120
+Recombined children: 40
+Random new entrants: 20
+```
+
+Why random entrants matter:
+
+They stop the whole system from collapsing into one local optimum.
+
+A good starting ratio is:
+
+* 10% elites
+* 60% mutations
+* 20% crossover
+* 10% random fresh experiments
+
+---
+
+# 5. Fitness Function
+
+Fitness is everything. If you choose the wrong one, the system optimizes nonsense.
+
+A good first fitness function is:
+
+```text
+fitness =
+  task_improvement
+  - cost_penalty
+  + novelty_bonus
+  + robustness_bonus
+```
+
+More concretely:
+
+```python
+fitness = (
+    3.0 * delta_accuracy
+    - 0.5 * normalized_runtime
+    - 0.5 * normalized_gpu_hours
+    + 0.8 * novelty_score
+    + 1.0 * holdout_stability
+)
+```
+
+Where:
+
+* `delta_accuracy` = improvement over baseline
+* `normalized_runtime` = cost
+* `novelty_score` = how different this is from prior successful lineages
+* `holdout_stability` = whether gains survive across seeds / eval slices
+
+This prevents the system from rewarding fake gains.
+
+---
+
+# 6. Three-Stage Evaluation Funnel
+
+Do not fully evaluate every child. That gets too expensive.
+
+Use a funnel:
+
+## Stage 1: cheap screening
+
+* tiny dataset
+* few steps
+* proxy metric
+* 3–10 minutes
+
+## Stage 2: medium validation
+
+* larger data
+* stronger eval
+* 15–30 minutes
+
+## Stage 3: expensive confirmation
+
+* full benchmark
+* multiple seeds
+* holdout
+* 1–4 hours
+
+Only a small fraction should reach stage 3.
+
+Example:
+
+```text
+1000 children
+↓
+250 pass stage 1
+↓
+40 pass stage 2
+↓
+5 pass stage 3
+```
+
+This is how you get scale cheaply.
+
+---
+
+# 7. Mutation Operators
+
+These are the engine of discovery.
+
+Start with controlled mutations.
+
+### Numeric mutation
+
+Small perturbations to:
+
+* learning rate
+* threshold
+* rank
+* temperature
+* steps
+
+Example:
+
+```python
+lr = lr * uniform(0.7, 1.3)
+threshold = clip(threshold + normal(0, 0.05), 0.0, 1.0)
+```
+
+### Categorical mutation
+
+Swap one component:
+
+* optimizer
+* adapter type
+* data filter
+* base prompt format
+
+### Structural mutation
+
+Change pipeline structure:
+
+* add critique stage
+* remove retrieval stage
+* insert rejection sampling
+* add curriculum pass
+
+### Schedule mutation
+
+Change ordering:
+
+* critique before filter
+* train then distill
+* distill then fine-tune
+
+These structural mutations are often where the surprising wins come from.
+
+---
+
+# 8. Recombination / Crossover
+
+Good experiments should combine.
+
+Example:
+
+Parent A is good at:
+
+* synthetic data generation
+* critique filtering
+
+Parent B is good at:
+
+* adapter configuration
+* curriculum schedule
+
+Child inherits:
+
+```yaml
+dataset_strategy: synthetic_filtered
+critique_model: enabled
+adapter_type: lora
+curriculum: progressive_hardness
+```
+
+Crossover is powerful because research ideas are often compositional.
+
+---
+
+# 9. Lineages and Species
+
+Do not treat the population as a pile of unrelated trials.
+
+Track ancestry:
+
+```yaml
+experiment_id: exp_8211
+parents: [exp_7922, exp_8013]
+lineage: lineage_44
+generation: 18
+species: critique_distill_family
+```
+
+This lets you answer:
+
+* which families are improving fastest
+* which branches are stuck
+* which mutations consistently help
+* which combinations repeatedly fail
+
+A “species” is a cluster of similar genomes.
+
+This matters because you want diversity. One strong lineage should not wipe out all others too early.
+
+---
+
+# 10. Novelty Search Layer
+
+If you optimize only for immediate score, the system gets conservative.
+
+Add novelty search.
+
+Novelty score can be based on distance in genome space or behavior space.
+
+For example:
+
+```text
+novelty = average distance to k nearest prior successful experiments
+```
+
+Then select some experiments because they are:
+
+* unusual
+* promising
+* cheap enough to test
+
+This helps find weird but valuable methods.
+
+A good selection rule is:
+
+```text
+selection_score = 0.7 * fitness + 0.3 * novelty
+```
+
+or maintain two pools:
+
+* exploit pool
+* explore pool
+
+---
+
+# 11. Research Memory
+
+The system needs persistent memory of what it has learned.
+
+Store:
+
+### Per experiment
+
+* genome
+* metrics
+* logs
+* artifacts
+* lineage
+* cost
+* failure mode
+
+### Per mutation
+
+* mutation type
+* parent performance
+* child performance
+* estimated contribution
+
+### Per lineage
+
+* slope of improvement
+* best result
+* robustness
+* stagnation count
+
+Then train a lightweight meta-model:
+
+```text
+genome features → predicted success probability
+```
+
+This becomes the system’s learned intuition.
+
+Over time, the evolution engine stops searching blindly.
+
+---
+
+# 12. The Meta-Scientist Layer
+
+This is the next jump in capability.
+
+Do not let the system only evolve experiments. Let it evolve its **own search strategy**.
+
+Meta-level traits:
+
+* mutation rate
+* crossover rate
+* elite fraction
+* novelty weight
+* cost penalties
+* promotion thresholds
+
+That means the system learns not only which experiments work, but **how to search for good experiments**.
+
+This becomes a two-level system:
+
+```text
+Level 1: evolve experiments
+Level 2: evolve the evolution policy
+```
+
+That is where it begins to feel like a real autonomous lab.
+
+---
+
+# 13. Architecture
+
+A practical layout:
+
+```text
+research_evolution/
+  core/
+    genome.py
+    mutations.py
+    crossover.py
+    fitness.py
+    novelty.py
+    species.py
+  execution/
+    queue.py
+    workers.py
+    runner.py
+    evaluator.py
+  memory/
+    db.py
+    lineage_store.py
+    artifact_store.py
+    meta_model.py
+  policy/
+    selector.py
+    scheduler.py
+    promoter.py
+    meta_evolver.py
+  reporting/
+    dashboard.py
+    lineage_graph.py
+    reports.py
+```
+
+---
+
+# 14. Database Schema
+
+You need this to stay organized.
+
+## experiments
+
+* experiment_id
+* generation
+* lineage_id
+* species_id
+* parent_ids
+* stage
+* status
+* genome_json
+* fitness
+* novelty
+* cost
+* created_at
+
+## metrics
+
+* experiment_id
+* eval_name
+* metric_name
+* metric_value
+* seed
+
+## mutations
+
+* child_id
+* parent_id
+* mutation_type
+* field_changed
+* old_value
+* new_value
+
+## artifacts
+
+* experiment_id
+* path
+* artifact_type
+
+## lineages
+
+* lineage_id
+* founder_id
+* best_fitness
+* generations_alive
+* stagnation_count
+
+---
+
+# 15. Scheduler Logic
+
+The scheduler decides what to run next.
+
+Priority should consider:
+
+```text
+priority =
+  predicted_success
+  × expected_information_gain
+  × novelty
+  ÷ estimated_cost
+```
+
+This is better than raw fitness because some experiments are valuable even when unlikely to win, if they teach the system a lot.
+
+Use separate worker pools:
+
+* cheap screening workers
+* medium validation workers
+* expensive confirmation workers
+
+That stops full runs from blocking rapid exploration.
+
+---
+
+# 16. Preventing Degenerate Optimization
+
+This is critical.
+
+A research evolution system will absolutely learn to exploit weak metrics if you let it.
+
+Add guards:
+
+### Holdout evaluation
+
+Never select purely on the same fast metric used for filtering.
+
+### Multi-seed confirmation
+
+A result that only works on one seed is suspicious.
+
+### Metric triangulation
+
+Use more than one metric.
+
+### Penalty for fragility
+
+If small changes kill performance, down-rank it.
+
+### Artifact inspection
+
+Randomly sample outputs for sanity checks.
+
+### Baseline re-run
+
+Recompute baselines periodically to avoid drift.
+
+Without this, the system will evolve benchmark hacks instead of real improvements.
+
+---
+
+# 17. Diversity Control
+
+Evolution systems can converge too early.
+
+Use:
+
+### Speciation
+
+Cluster similar genomes and preserve top members of each cluster.
+
+### Stagnation pruning
+
+Kill species that stop improving.
+
+### Diversity floor
+
+Reserve compute for underrepresented regions.
+
+### Random immigrants
+
+Inject new random genomes every generation.
+
+A practical rule:
+
+```text
+No species can consume more than 35% of the next generation budget
+```
+
+That keeps exploration healthy.
+
+---
+
+# 18. Best Initial Domain
+
+Do not start with open-ended “all of ML research.”
+
+Start with one tight domain where:
+
+* experiments are short
+* metrics are crisp
+* pipelines are modular
+
+Best starting domains:
+
+### 1. Small-model reasoning improvement
+
+Strong choice.
+
+* GSM8K-style subsets
+* synthetic CoT filtering
+* self-distillation
+* critique loops
+
+### 2. Coding task improvement
+
+Also strong.
+
+* unit tests
+* patch success
+* edit acceptance
+* pass@k
+
+### 3. Image generation scoring loops
+
+Possible, but harder to evaluate robustly.
+
+For you, the strongest first domain is probably:
+
+**small-model reasoning or coding improvement**, because the loops are measurable and compute-bounded.
+
+---
+
+# 19. Minimal Viable Version
+
+Do not build the full thing first.
+
+Build this:
+
+## v0
+
+* fixed population of 50
+* only mutations, no crossover
+* one task family
+* one proxy eval
+* one confirmation eval
+* SQLite
+* simple dashboard
+
+## v1
+
+* add crossover
+* add lineages
+* add novelty score
+* add species
+* add 3-stage funnel
+
+## v2
+
+* add learned success predictor
+* add meta-evolution
+* add automatic report generation
+
+That is enough to prove the concept.
+
+---
+
+# 20. Example Generation Cycle
+
+Generation 0:
+
+* seed 50 experiments around a known baseline
+
+Generation 1:
+
+* keep top 5
+* mutate top 20
+* add 5 random outsiders
+
+Generation 2:
+
+* identify 3 promising lineages
+* crossover best members
+* run stage-2 validation
+
+Generation 5:
+
+* one lineage emerges:
+
+  * synthetic filtered data
+  * critique threshold 0.78
+  * low-rank LoRA on middle layers
+  * progressive curriculum
+* it beats the baseline by 4.8%
+
+Generation 12:
+
+* meta-policy learns critique-based families improve most often
+* allocates more budget there while preserving exploration elsewhere
+
+That is the behavior you want.
+
+---
+
+# 21. What Makes This Impressive
+
+A normal agent runs experiments.
+
+A research evolution system:
+
+* builds families of methods
+* discovers unexpected combinations
+* accumulates institutional memory
+* learns how to search better over time
+
+That is much closer to an **automated discovery engine** than a script.
+
+---
+
+# 22. Concrete First Build Plan
+
+### Week 1
+
+* genome schema
+* experiment runner
+* fitness calculation
+* SQLite logging
+
+### Week 2
+
+* mutation engine
+* population manager
+* stage-1 and stage-2 scheduler
+
+### Week 3
+
+* lineage tracking
+* novelty score
+* dashboard
+
+### Week 4
+
+* crossover
+* species clustering
+* report generator
+
+By the end of that, you have a real v1.
+
+---
+
+# 23. Strong First Demo
+
+The cleanest demo is:
+
+**“An autonomous evolution system that discovers better small-model reasoning pipelines than a human-tuned baseline under a fixed GPU budget.”**
+
+Show:
+
+* lineage tree
+* compute spent
+* best evolved pipeline
+* baseline vs evolved result
+* mutation history that led to the win
+
+That will look much more real than a vague “AI scientist” claim.
+
+---
+
+# 24. Stronger Version of the Core Loop
+
+```python
+while budget_remaining():
+
+    parents = selector.choose_parents(population, memory)
+
+    children = []
+    for parent_set in parents:
+        if random() < crossover_rate:
+            child = crossover(parent_set)
+        else:
+            child = mutate(parent_set[0])
+        children.append(child)
+
+    stage1_results = run_stage1(children)
+    promoted = promoter.to_stage2(stage1_results)
+
+    stage2_results = run_stage2(promoted)
+    finalists = promoter.to_stage3(stage2_results)
+
+    stage3_results = run_stage3(finalists)
+
+    population = survivor_selection(
+        old_population=population,
+        new_results=stage3_results,
+        diversity_constraints=True
+    )
+
+    memory.update(children, stage1_results, stage2_results, stage3_results)
+    meta_evolver.update(memory)
+```
+
+---
+
+# 25. The One Mistake to Avoid
+
+Do not make it “fully general” too early.
+
+If you try to evolve:
+
+* tasks
+* models
+* datasets
+* methods
+* benchmarks
+* search policy
+
+all at once, it turns into noise.
+
+Lock down:
+
+* one task family
+* one model family
+* one compute budget
+* one clean evaluation target
+
+Then evolve inside that box first.
+
+That is how you get signal.
+
+## Concrete implementation blueprint
+
+Build **one narrow v1**:
+
+**Goal:** evolve small-model reasoning pipelines that beat a fixed baseline on a small GSM8K-style benchmark under a fixed compute budget.
+
+Lock these for v1:
+
+* **task family:** small-model reasoning improvement
+* **base model family:** Qwen 1.5B–1.7B class or similar local small instruct model
+* **adaptation method:** LoRA only
+* **primary metric:** exact match accuracy
+* **proxy metric:** small eval subset accuracy
+* **budget:** fixed per generation
+* **storage:** SQLite + files on disk
+* **language:** Python
+
+Do not generalize beyond that yet.
+
+---
+
+# 1. Repository structure
+
+```text
+research_evolver/
+  README.md
+  pyproject.toml
+  configs/
+    base.yaml
+    search_space.yaml
+    benchmarks.yaml
+  data/
+    raw/
+    processed/
+    synthetic/
+  artifacts/
+    experiments/
+    reports/
+    models/
+  src/
+    main.py
+    cli.py
+
+    core/
+      types.py
+      genome.py
+      search_space.py
+      mutations.py
+      crossover.py
+      lineage.py
+      species.py
+      fitness.py
+      novelty.py
+      budget.py
+
+    execution/
+      queue.py
+      scheduler.py
+      runner.py
+      trainer.py
+      evaluator.py
+      generator.py
+      verifier.py
+
+    memory/
+      db.py
+      schema.sql
+      experiment_store.py
+      artifact_store.py
+      meta_features.py
+      success_model.py
+
+    policy/
+      selector.py
+      promoter.py
+      survivor.py
+      meta_policy.py
+
+    benchmarks/
+      gsm8k_proxy.py
+      gsm8k_holdout.py
+      exact_match.py
+
+    reporting/
+      dashboard.py
+      lineage_report.py
+      generation_report.py
+      plots.py
+
+    utils/
+      hashing.py
+      logging.py
+      seeds.py
+      paths.py
+      config.py
+      json_io.py
+
+  scripts/
+    init_db.py
+    run_generation.py
+    run_stage1.py
+    run_stage2.py
+    run_stage3.py
+    make_report.py
+```
+
+---
+
+# 2. Core object model
+
+There should be 6 main objects:
+
+### `Genome`
+
+Defines one experiment recipe.
+
+### `Experiment`
+
+A genome plus runtime state, IDs, parents, metrics, and artifacts.
+
+### `Population`
+
+Current set of active experiments.
+
+### `Lineage`
+
+Tracks ancestry and performance history.
+
+### `Scheduler`
+
+Chooses what to run next under budget.
+
+### `Memory`
+
+SQLite-backed storage of all prior experiments and mutation outcomes.
+
+---
+
+# 3. Genome schema for v1
+
+Keep it compact. Every field should be evolvable or fixed on purpose.
+
+```python
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class Genome:
+    # identity
+    task_family: str                     # "reasoning"
+    base_model: str                      # e.g. "qwen2.5-1.5b-instruct"
+    
+    # data generation / selection
+    synthetic_data_ratio: float          # 0.0 - 1.0
+    prompt_template_id: str              # "cot_v1", "cot_short", ...
+    filter_strategy: str                 # "none", "self_consistency", "critique_threshold"
+    critique_enabled: bool
+    critique_threshold: float            # 0.0 - 1.0
+    curriculum_strategy: str             # "none", "easy_to_hard", "mixed"
+
+    # training
+    adapter_rank: int                    # 4, 8, 16, 32
+    adapter_alpha: int                   # 8, 16, 32, 64
+    adapter_dropout: float               # 0.0 - 0.2
+    target_modules: str                  # "attn_only", "mlp_only", "attn_mlp"
+    learning_rate: float
+    batch_size: int
+    grad_accum: int
+    train_steps: int
+    warmup_ratio: float
+    weight_decay: float
+
+    # decoding / generation
+    temperature: float
+    top_p: float
+    max_new_tokens: int
+
+    # evaluation / control
+    proxy_eval_size: int
+    confirmation_eval_size: int
+    seed: int
+```
+
+For v1, keep several fields discrete so mutation is stable.
+
+---
+
+# 4. Search space config
+
+Put the allowed ranges in YAML so you can change them without touching code.
+
+```yaml
+base_model:
+  values: ["qwen_small"]
+
+synthetic_data_ratio:
+  min: 0.0
+  max: 1.0
+
+prompt_template_id:
+  values: ["cot_v1", "cot_short", "stepwise_v1"]
+
+filter_strategy:
+  values: ["none", "self_consistency", "critique_threshold"]
+
+critique_enabled:
+  values: [true, false]
+
+critique_threshold:
+  min: 0.50
+  max: 0.95
+
+curriculum_strategy:
+  values: ["none", "easy_to_hard", "mixed"]
+
+adapter_rank:
+  values: [4, 8, 16, 32]
+
+adapter_alpha:
+  values: [8, 16, 32, 64]
+
+adapter_dropout:
+  min: 0.0
+  max: 0.2
+
+target_modules:
+  values: ["attn_only", "mlp_only", "attn_mlp"]
+
+learning_rate:
+  values: [5e-6, 1e-5, 2e-5, 5e-5]
+
+batch_size:
+  values: [4, 8, 16]
+
+grad_accum:
+  values: [1, 2, 4, 8]
+
+train_steps:
+  values: [100, 200, 400, 800, 1200]
+
+warmup_ratio:
+  values: [0.0, 0.03, 0.05, 0.1]
+
+weight_decay:
+  values: [0.0, 0.01, 0.05]
+
+temperature:
+  values: [0.2, 0.5, 0.7, 0.9]
+
+top_p:
+  values: [0.8, 0.9, 0.95, 1.0]
+
+max_new_tokens:
+  values: [128, 256, 384]
+```
+
+---
+
+# 5. SQLite schema
+
+Use SQLite first. It is enough.
+
+## `experiments`
+
+```sql
+CREATE TABLE experiments (
+  experiment_id TEXT PRIMARY KEY,
+  generation INTEGER NOT NULL,
+  lineage_id TEXT NOT NULL,
+  species_id TEXT,
+  parent_ids TEXT,
+  status TEXT NOT NULL,
+  stage TEXT NOT NULL,
+  genome_json TEXT NOT NULL,
+  fitness REAL,
+  novelty REAL,
+  selection_score REAL,
+  estimated_cost REAL,
+  actual_cost REAL,
+  created_at TEXT NOT NULL,
+  started_at TEXT,
+  completed_at TEXT
+);
+```
+
+## `metrics`
+
+```sql
+CREATE TABLE metrics (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  experiment_id TEXT NOT NULL,
+  split TEXT NOT NULL,
+  metric_name TEXT NOT NULL,
+  metric_value REAL NOT NULL,
+  seed INTEGER,
+  FOREIGN KEY(experiment_id) REFERENCES experiments(experiment_id)
+);
+```
+
+## `mutations`
+
+```sql
+CREATE TABLE mutations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  child_id TEXT NOT NULL,
+  parent_id TEXT NOT NULL,
+  mutation_type TEXT NOT NULL,
+  field_name TEXT NOT NULL,
+  old_value TEXT,
+  new_value TEXT,
+  delta_fitness REAL,
+  FOREIGN KEY(child_id) REFERENCES experiments(experiment_id)
+);
+```
+
+## `lineages`
+
+```sql
+CREATE TABLE lineages (
+  lineage_id TEXT PRIMARY KEY,
+  founder_id TEXT NOT NULL,
+  best_experiment_id TEXT,
+  generations_alive INTEGER DEFAULT 0,
+  best_fitness REAL,
+  stagnation_count INTEGER DEFAULT 0
+);
+```
+
+## `artifacts`
+
+```sql
+CREATE TABLE artifacts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  experiment_id TEXT NOT NULL,
+  artifact_type TEXT NOT NULL,
+  path TEXT NOT NULL,
+  sha256 TEXT,
+  FOREIGN KEY(experiment_id) REFERENCES experiments(experiment_id)
+);
+```
+
+## `generation_summary`
+
+```sql
+CREATE TABLE generation_summary (
+  generation INTEGER PRIMARY KEY,
+  population_size INTEGER NOT NULL,
+  stage1_passed INTEGER NOT NULL,
+  stage2_passed INTEGER NOT NULL,
+  stage3_passed INTEGER NOT NULL,
+  best_fitness REAL,
+  best_experiment_id TEXT,
+  total_cost REAL
+);
+```
+
+---
+
+# 6. First benchmark target
+
+Use a narrow eval setup.
+
+## Training source
+
+* small curated reasoning set
+* plus optional synthetic reasoning traces
+
+## Proxy eval
+
+* 50–100 reasoning problems
+* exact match only
+* single seed
+* fast generation settings
+
+## Confirmation eval
+
+* 200–300 problems
+* exact match
+* 2 seeds
+
+## Holdout eval
+
+* frozen hidden subset
+* only for finalists
+* exact match
+* 2 seeds
+
+v1 success condition:
+
+* evolved pipeline beats baseline by a real margin on holdout
+* does not exceed compute budget
+* survives multi-seed confirmation
+
+---
+
+# 7. Three-stage funnel
+
+## Stage 1: cheap screen
+
+Purpose: kill weak children fast.
+
+* train_steps capped at 100–200
+* tiny eval subset
+* one seed
+* no full artifact retention except logs and metrics
+
+Promote roughly top 20–30%.
+
+## Stage 2: medium validation
+
+Purpose: check if signal persists.
+
+* train_steps 400–800
+* larger eval subset
+* maybe 2 seeds for top few
+* save adapter weights
+
+Promote roughly top 10–20%.
+
+## Stage 3: expensive confirmation
+
+Purpose: determine survival / elite status.
+
+* full configured train_steps
+* full holdout
+* multi-seed
+* save all artifacts and report
+
+Only a few finalists.
+
+---
+
+# 8. Fitness function
+
+Use a conservative first version.
+
+```python
+def compute_fitness(
+    delta_proxy_acc: float,
+    delta_holdout_acc: float,
+    runtime_penalty: float,
+    gpu_penalty: float,
+    stability_score: float,
+    novelty_score: float,
+) -> float:
+    return (
+        1.5 * delta_proxy_acc
+        + 3.0 * delta_holdout_acc
+        + 1.0 * stability_score
+        + 0.5 * novelty_score
+        - 0.75 * runtime_penalty
+        - 0.75 * gpu_penalty
+    )
+```
+
+Do not overweight novelty at first. It should help tie-breaking, not dominate.
+
+---
+
+# 9. First mutation operators
+
+Start with these 8 only.
+
+## Numeric local mutation
+
+Slightly perturb a scalar.
+
+Fields:
+
+* `learning_rate`
+* `critique_threshold`
+* `adapter_dropout`
+* `synthetic_data_ratio`
+* `warmup_ratio`
+
+## Discrete swap
+
+Swap to another allowed categorical value.
+
+Fields:
+
+* `filter_strategy`
+* `curriculum_strategy`
+* `target_modules`
+* `prompt_template_id`
+
+## Ordinal step
+
+Move one step up or down in ordered lists.
+
+Fields:
+
+* `adapter_rank`
+* `adapter_alpha`
+* `batch_size`
+* `grad_accum`
+* `train_steps`
+* `temperature`
+* `top_p`
+
+## Toggle mutation
+
+Flip a boolean.
+
+Fields:
+
+* `critique_enabled`
+
+## Coupled mutation
+
+Mutate fields that should move together.
+
+Examples:
+
+* if `critique_enabled=False`, lower weight of `critique_threshold`
+* if `adapter_rank` increases, maybe mutate `learning_rate` downward
+* if `batch_size` increases, maybe reduce `grad_accum`
+
+## Constraint repair
+
+After mutation, clamp invalid combinations.
+
+Examples:
+
+* effective batch must stay within budget
+* `critique_threshold` only matters if critique is enabled
+* `train_steps` cannot exceed stage max
+
+## Structural pipeline mutation
+
+One controlled structural change.
+
+Examples:
+
+* `filter_strategy: none -> critique_threshold`
+* `curriculum_strategy: none -> easy_to_hard`
+* `prompt_template_id: cot_short -> stepwise_v1`
+
+## Fresh random immigrant
+
+Sample a full new genome near a baseline anchor.
+
+This keeps diversity alive.
+
+---
+
+# 10. First crossover operators
+
+Only add crossover after mutation-only v0 works.
+
+## Single-point semantic crossover
+
+Take data-related traits from one parent, training traits from another.
+
+```python
+child.filter_strategy = parent_a.filter_strategy
+child.curriculum_strategy = parent_a.curriculum_strategy
+child.adapter_rank = parent_b.adapter_rank
+child.learning_rate = parent_b.learning_rate
+```
+
+## Block crossover
+
+Use blocks:
+
+* data block
+* training block
+* decoding block
+
+## Interpolated crossover
+
+For numeric fields, average or weighted combine.
+
+```python
+child.learning_rate = geometric_mean(p1.learning_rate, p2.learning_rate)
+child.synthetic_data_ratio = (p1.synthetic_data_ratio + p2.synthetic_data_ratio) / 2
+```
+
+Keep crossover rare at first: maybe 15–20%.
+
+---
+
+# 11. Selection policy
+
+Use a mixed policy.
+
+## Elite preservation
+
+Carry top 5–10% forward unchanged.
+
+## Tournament selection
+
+Select parents by small tournament to avoid overly greedy selection.
+
+## Exploration budget
+
+Reserve 10–20% of stage-1 budget for:
+
+* random immigrants
+* novelty-heavy children
+* underrepresented species
+
+---
+
+# 12. Species clustering
+
+Keep it simple.
+
+Represent each genome as a vector:
+
+* one-hot categorical features
+* normalized numeric features
+
+Cluster with a cheap method:
+
+* hierarchical threshold clustering, or
+* k-means refreshed every generation
+
+Species are used only for budget control and diversity, not for fancy theory.
+
+Rule:
+
+* no species gets more than 35% of stage-1 children
+* species with 3 stagnant generations lose budget
+
+---
+
+# 13. Lineage tracking
+
+Each child stores:
+
+* parent IDs
+* lineage ID
+* generation
+* mutation summary
+
+A lineage report should show:
+
+* founder genome
+* best descendant
+* generation-by-generation fitness
+* most helpful mutation types
+* current stagnation count
+
+That becomes one of the most compelling outputs.
+
+---
+
+# 14. Success predictor
+
+Add this only after enough data exists.
+
+Train a lightweight model on prior experiments:
+
+* input: genome features
+* output: probability of stage-2 or stage-3 success
+
+Use something simple:
+
+* gradient boosted trees
+* random forest
+* logistic regression
+
+It should rank candidates, not make hard decisions initially.
+
+---
+
+# 15. Execution flow
+
+## Main generation loop
+
+```python
+def run_generation(gen_idx: int):
+    population = load_population()
+    budget = load_budget()
+
+    parents = select_parents(population, budget)
+    children = spawn_children(parents, budget)
+
+    stage1_results = run_stage(children, stage="stage1")
+    promoted1 = promote_stage1(stage1_results)
+
+    stage2_results = run_stage(promoted1, stage="stage2")
+    promoted2 = promote_stage2(stage2_results)
+
+    stage3_results = run_stage(promoted2, stage="stage3")
+
+    survivors = choose_survivors(
+        old_population=population,
+        stage3_results=stage3_results,
+        diversity_enabled=True
+    )
+
+    update_lineages(stage1_results, stage2_results, stage3_results)
+    update_memory()
+    save_population(survivors)
+    write_generation_report(gen_idx)
+```
+
+---
+
+# 16. Python class design
+
+## `genome.py`
+
+```python
+class Genome:
+    def to_dict(self) -> dict: ...
+    @classmethod
+    def from_dict(cls, data: dict) -> "Genome": ...
+    def feature_vector(self) -> list[float]: ...
+    def validate(self) -> None: ...
+    def repair(self) -> "Genome": ...
+```
+
+## `mutations.py`
+
+```python
+class Mutator:
+    def mutate(self, genome: Genome) -> tuple[Genome, list[dict]]: ...
+```
+
+## `crossover.py`
+
+```python
+class Crossover:
+    def crossover(self, a: Genome, b: Genome) -> tuple[Genome, list[dict]]: ...
+```
+
+## `fitness.py`
+
+```python
+class FitnessScorer:
+    def score(self, metrics: dict, baseline: dict, cost: dict, novelty: float) -> float: ...
+```
+
+## `runner.py`
+
+```python
+class ExperimentRunner:
+    def run(self, experiment: "Experiment", stage: str) -> dict: ...
+```
+
+## `selector.py`
+
+```python
+class ParentSelector:
+    def select(self, population: list["Experiment"], n: int) -> list[list["Experiment"]]: ...
+```
+
+## `promoter.py`
+
+```python
+class Promoter:
+    def from_stage1(self, results: list["Experiment"]) -> list["Experiment"]: ...
+    def from_stage2(self, results: list["Experiment"]) -> list["Experiment"]: ...
+```
+
+## `survivor.py`
+
+```python
+class SurvivorSelector:
+    def select(self, old_population, new_candidates) -> list["Experiment"]: ...
+```
+
+---
+
+# 17. Artifacts per experiment
+
+Each experiment gets a folder:
+
+```text
+artifacts/experiments/exp_000123/
+  genome.json
+  mutation_log.json
+  stage1_metrics.json
+  stage2_metrics.json
+  stage3_metrics.json
+  train.log
+  eval.log
+  adapter/
+  report.md
+```
+
+Never save full heavy artifacts for weak stage-1 failures unless needed.
+
+---
+
+# 18. Dashboard
+
+Your first dashboard only needs 6 views:
+
+### Overview
+
+* current generation
+* active jobs
+* budget used
+* best fitness
+
+### Population table
+
+* experiment ID
+* lineage
+* species
+* stage
+* fitness
+* cost
+
+### Lineage graph
+
+* parent-child tree
+* best branch highlighted
+
+### Species distribution
+
+* species sizes
+* best species
+* stagnating species
+
+### Mutation stats
+
+* mutation type frequency
+* average delta fitness per mutation
+
+### Best experiment card
+
+* genome summary
+* baseline vs evolved metrics
+* artifact links
+
+This is enough for a compelling demo.
+
+---
+
+# 19. Month-1 roadmap
+
+## Week 1
+
+Build the non-evolution baseline.
+
+* dataset loader
+* baseline training loop
+* proxy evaluator
+* holdout evaluator
+* SQLite init
+* artifact writing
+
+Deliverable: one baseline run end-to-end.
+
+## Week 2
+
+Build population + mutation-only evolution.
+
+* genome schema
+* search space YAML
+* mutator
+* stage-1 scheduler
+* generation loop
+* generation report
+
+Deliverable: mutate 50 children from a baseline and rank them.
+
+## Week 3
+
+Add real promotion and survivor logic.
+
+* stage-2 and stage-3 promotion
+* survivor selection
+* lineage tracking
+* diversity guardrails
+* basic dashboard
+
+Deliverable: full 3-stage generation cycle.
+
+## Week 4
+
+Add crossover and reporting polish.
+
+* crossover
+* species clustering
+* novelty score
+* mutation contribution analysis
+* best lineage report
+
+Deliverable: first convincing autonomous evolution demo.
+
+---
+
+# 20. Strong first demo script
+
+Use this exact story:
+
+### Baseline
+
+Start with one fixed reasoning fine-tuning recipe.
+
+### Evolution
+
+Run 5–10 generations under a fixed budget.
+
+### Result
+
+Show that the system discovered a better pipeline.
+
+### Explainability
+
+Show the winning lineage and the mutations that mattered.
+
+Example presentation flow:
+
+1. baseline recipe and score
+2. total search budget
+3. number of experiments run
+4. lineage tree
+5. best evolved recipe
+6. holdout improvement
+7. cost comparison
+8. failure modes learned
+
+That is much more credible than claiming “self-improving AI scientist.”
+
+---
+
+# 21. Biggest mistakes to avoid
+
+### Too many evolvable fields
+
+Keep the genome small enough that search has signal.
+
+### Weak holdout discipline
+
+You need a real frozen holdout or the system will cheat.
+
+### No cost penalties
+
+It will drift toward slow, bloated pipelines.
+
+### Saving too many artifacts
+
+Disk and I/O will become a mess.
+
+### Generalizing too early
+
+Do not add multiple task families in month 1.
+
+---
+
+# 22. Recommended v0 defaults
+
+These are sane first defaults:
+
+* population size: **50**
+* elites: **5**
+* children per generation: **45**
+* stage-1 promotion: **top 12**
+* stage-2 promotion: **top 4**
+* stage-3 finalists: **top 2**
+* mutation probability: **0.85**
+* crossover probability: **0.15**
+* random immigrants per generation: **5**
+* species cap: **35%**
+* generations for first demo: **5 to 10**
+
+That is enough to produce meaningful behavior without exploding complexity.
+
+---
+
+# 23. Minimal dependencies
+
+Keep the stack boring.
+
+* Python
+* PyTorch
+* Transformers
+* PEFT
+* Datasets
+* SQLite
+* Pandas
+* scikit-learn
+* FastAPI or Streamlit for dashboard
+* Matplotlib for simple plots
+
+No distributed systems stack yet unless you truly need it.
+
+---
+
+# 24. What to build first, exactly
+
+Implement in this order:
+
+1. `Genome`
+2. `search_space.yaml`
+3. `baseline trainer/evaluator`
+4. `SQLite schema`
+5. `Mutator`
+6. `Stage-1 runner`
+7. `Generation loop`
+8. `Promotion logic`
+9. `Lineage tracking`
+10. `Dashboard`
+11. `Crossover`
+12. `Species`
+13. `Novelty`
+14. `Success predictor`
+
+That order gives you useful results fast.
+
+---
+
+# 25. Clean v1 success definition
+
+Call v1 successful only if all are true:
+
+* it autonomously runs multiple generations
+* it produces a lineage history
+* the best evolved pipeline beats the locked baseline on frozen holdout
+* the improvement survives at least 2 seeds
+* total search cost stays within the fixed budget
+* you can explain which mutations led to the win
+

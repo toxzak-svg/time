@@ -33,6 +33,7 @@ def evaluate_system(
         "C": rb.retrieve_time_constraint,
         "D": rb.retrieve_tta,
         "D_improved": rb.retrieve_tta_improved,
+        "D_revised": rb.retrieve_tta_improved,  # Validity-only + confidence tiebreak (no decay)
     }
     resolver = resolvers.get(system)
     if not resolver:
@@ -96,8 +97,8 @@ def main() -> None:
     ap.add_argument(
         "--systems",
         type=str,
-        default="A,B,C,D",
-        help="Comma-separated systems (e.g. A,B,C,D)",
+        default="A,B,C,D,D_revised",
+        help="Comma-separated systems (e.g. A,B,C,D,D_revised)",
     )
     args = ap.parse_args()
 

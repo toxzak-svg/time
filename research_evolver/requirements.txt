@@ -1,0 +1,9 @@
+# Research Evolution v1 — baseline path (train + eval)
+# Install from repo root: pip install -r research_evolver/requirements.txt
+
+torch>=2.0.0
+transformers>=4.36.0
+peft>=0.7.0
+datasets>=2.14.0
+pyyaml>=6.0
+accelerate>=0.25.0

@@ -350,3 +350,9 @@ Extending with adversarial task metrics (e.g. Reversion Accuracy, Join Accuracy)
 5. **Timeline reconstruction**: Facts stated only as order relations; questions over inferred order.
 
 See `scripts/generate_temporalbench_v1.py`–`v4` for schema and patterns; new generators can follow the same events/facts/questions JSONL format.
+
+### Implemented adversarial generator and Colab
+
+- **`scripts/generate_adversarial_temporal.py`** — Generates Reversion, Interval, CausalReasoning, MultiReversion (A→B→C→B→D), IntervalMidpoint (“halfway between Bob’s start and end”), and MultiEntityJoin (“who was X when Y became CEO?”). Output: `benchmarks/adversarial_temporal_facts.jsonl`, `benchmarks/adversarial_temporal_questions.jsonl`.
+- **`scripts/run_adversarial_benchmark.py`** — Evaluates systems A/B/C/D/D_revised; reports per–task family accuracy (e.g. ReversionAccuracy, IntervalAccuracy) and OverallAccuracy.
+- **`tta_adversarial_colab.ipynb`** — Colab notebook: generate adversarial data, run A vs D vs D_revised, display results and a short TTA-vs-RAG conclusion.

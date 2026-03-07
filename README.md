@@ -76,6 +76,17 @@ python scripts/generate_accuracy_figure.py --combined --out figures/accuracy_vs_
 
 Ablation: `python scripts/run_benchmark.py --ablation` (D, D_no_decay, D_no_intervals, D_no_rerank). Semantic: `--semantic` adds E, E_hybrid (requires `sentence-transformers`).
 
+### Adversarial temporal tasks (TTA vs RAG)
+
+- **Generator**: `scripts/generate_adversarial_temporal.py` — Reversion, Interval, CausalReasoning, MultiReversion, IntervalMidpoint, MultiEntityJoin.
+- **Harness**: `scripts/run_adversarial_benchmark.py` — metrics by task family (e.g. ReversionAccuracy, OverallAccuracy). Systems: A, B, C, D, D_revised.
+- **Colab**: `tta_adversarial_colab.ipynb` — generate adversarial data, run A vs D vs D_revised, view per-task accuracy and conclusion.
+
+```bash
+python scripts/generate_adversarial_temporal.py --out-dir benchmarks
+python scripts/run_adversarial_benchmark.py --systems A,D,D_revised --out results/adversarial_results.csv
+```
+
 ### Colab
 
 - **`tta_benchmark_colab.ipynb`** — main benchmark (A/B/C/D and optional semantic) on v1–v4. Clone the repo into the Colab runtime then run the notebook cells (generate + `run_benchmark.py`).
