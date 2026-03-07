@@ -353,6 +353,15 @@ See `scripts/generate_temporalbench_v1.py`–`v4` for schema and patterns; new g
 
 ### Implemented adversarial generator and Colab
 
-- **`scripts/generate_adversarial_temporal.py`** — Generates Reversion, Interval, CausalReasoning, MultiReversion (A→B→C→B→D), IntervalMidpoint (“halfway between Bob’s start and end”), and MultiEntityJoin (“who was X when Y became CEO?”). Output: `benchmarks/adversarial_temporal_facts.jsonl`, `benchmarks/adversarial_temporal_questions.jsonl`.
-- **`scripts/run_adversarial_benchmark.py`** — Evaluates systems A/B/C/D/D_revised; reports per–task family accuracy (e.g. ReversionAccuracy, IntervalAccuracy) and OverallAccuracy.
+- **`scripts/generate_adversarial_temporal.py`** — Generates:
+  - **Reversion** — A→B→A timelines; query after reversion returns A.
+  - **Interval** — Explicit validity windows; boundary and midpoint queries.
+  - **CausalReasoning** — Before/after/between style (as-of past).
+  - **MultiReversion** — A→B→C→B→D; query at end returns D.
+  - **IntervalMidpoint** — “Who was CEO halfway between Bob’s start and end?”
+  - **MultiEntityJoin** — “Who was X when Y became CEO?” (cross-timeline alignment).
+  - **FutureFact** — Facts with `t_valid_from` in the future; “Who will be CEO on day X?”
+  - **TimelineReconstruction** — “Who was CEO in the first/second/third term?” (ordinal over inferred order).
+  Output: `benchmarks/adversarial_temporal_facts.jsonl`, `benchmarks/adversarial_temporal_questions.jsonl`.
+- **`scripts/run_adversarial_benchmark.py`** — Evaluates systems A/B/C/D/D_revised; reports per–task family accuracy (e.g. ReversionAccuracy, FutureFactAccuracy, TimelineReconstructionAccuracy) and OverallAccuracy.
 - **`tta_adversarial_colab.ipynb`** — Colab notebook: generate adversarial data, run A vs D vs D_revised, display results and a short TTA-vs-RAG conclusion.

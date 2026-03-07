@@ -78,8 +78,8 @@ Ablation: `python scripts/run_benchmark.py --ablation` (D, D_no_decay, D_no_inte
 
 ### Adversarial temporal tasks (TTA vs RAG)
 
-- **Generator**: `scripts/generate_adversarial_temporal.py` — Reversion, Interval, CausalReasoning, MultiReversion, IntervalMidpoint, MultiEntityJoin.
-- **Harness**: `scripts/run_adversarial_benchmark.py` — metrics by task family (e.g. ReversionAccuracy, OverallAccuracy). Systems: A, B, C, D, D_revised.
+- **Generator**: `scripts/generate_adversarial_temporal.py` — Reversion, Interval, CausalReasoning, MultiReversion, IntervalMidpoint, MultiEntityJoin, FutureFact, TimelineReconstruction.
+- **Harness**: `scripts/run_adversarial_benchmark.py` — metrics by task family (e.g. ReversionAccuracy, FutureFactAccuracy, OverallAccuracy). Systems: A, B, C, D, D_revised.
 - **Colab**: `tta_adversarial_colab.ipynb` — generate adversarial data, run A vs D vs D_revised, view per-task accuracy and conclusion.
 
 ```bash
@@ -91,6 +91,10 @@ python scripts/run_adversarial_benchmark.py --systems A,D,D_revised --out result
 
 - **`tta_benchmark_colab.ipynb`** — main benchmark (A/B/C/D and optional semantic) on v1–v4. Clone the repo into the Colab runtime then run the notebook cells (generate + `run_benchmark.py`).
 - **`adversarial_temporal_colab.ipynb`** — adversarial tasks: run `scripts/generate_adversarial_temporal.py` and `scripts/run_adversarial_benchmark.py`; results in `results/adversarial_temporal_results.csv`.
+
+### Agent City (OpenClaw + Moltbook)
+
+- **`agent_city/`** — an [OpenClaw](https://docs.openclaw.ai/) environment where agents **live**, **learn**, and **reproduce** in the temporal benchmark world, with optional publishing on [Moltbook](https://www.moltbook.com/). Includes citizen workspaces (SOUL.md), skills (run benchmark, **run research evolution**, Moltbook publish), a reproduction script to spawn child agents, and Moltbook auth/verify. See **`agent_city/README.md`** and **`agent_city/CITY.md`**.
 
 ### Results layout
 

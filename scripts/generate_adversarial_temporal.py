@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Generate adversarial temporal benchmark: reversion, interval, and causal-style questions.
+"""Generate adversarial temporal benchmark: reversion, interval, causal, and related task families.
 
 Outputs facts and questions in the same JSONL schema as TemporalBench (run_benchmark.py).
-Task families: Reversion, Interval, CausalReasoning.
+Task families: Reversion, Interval, CausalReasoning, MultiReversion, IntervalMidpoint,
+MultiEntityJoin, FutureFact, TimelineReconstruction.
 """
 
 from __future__ import annotations
@@ -304,6 +305,114 @@ def generate_causal_facts_and_questions(
     return facts, questions
 
 
+def generate_future_fact_facts_and_questions(
+    n_subjects: int, seed: int, horizon_start: int = 61, horizon_end: int = 120
+) -> tuple[list[dict], list[dict]]:
+    """Facts with t_valid_from in the future; 'who will be CEO on day X?' queries."""
+    rng = random.Random(seed)
+    names = ["Alice", "Bob", "Carol", "Dave"]
+    facts = []
+    questions = []
+    step = (horizon_end - horizon_start + 1) // 3
+    for i in range(n_subjects):
+        subj = f"future_{i}"
+        # Future terms: Alice 61-80, Bob 81-100, Carol 101-120 (example)
+        t1_from, t1_until = horizon_start, horizon_start + step - 1
+        t2_from, t2_until = horizon_start + step, horizon_start + 2 * step - 1
+        t3_from, t3_until = horizon_start + 2 * step, horizon_end
+        for name, t_from, t_until in [
+            (names[0], t1_from, t1_until),
+            (names[1], t2_from, t2_until),
+            (names[2], t3_from, t3_until),
+        ]:
+            facts.append({
+                "fact_id": f"future_{i}_{name}",
+                "content": f"ceo:{subj}:d{t_from}:{name}",
+                "t_valid_from": t_from,
+                "t_valid_until": t_until,
+                "domain": "ceo",
+                "confidence": 1.0,
+                "decay_fn": "none",
+            })
+        mid1 = (t1_from + t1_until) // 2
+        mid2 = (t2_from + t2_until) // 2
+        questions.append({
+            "question_id": f"future_q_{i}_mid1",
+            "task_family": "FutureFact",
+            "prompt": f"Who will be CEO of {subj} on day {mid1}?",
+            "as_of_day": mid1,
+            "domain": "ceo",
+            "subject": subj,
+            "answer": f"ceo:{subj}:d{t1_from}:{names[0]}",
+        })
+        questions.append({
+            "question_id": f"future_q_{i}_mid2",
+            "task_family": "FutureFact",
+            "prompt": f"Who will be CEO of {subj} on day {mid2}?",
+            "as_of_day": mid2,
+            "domain": "ceo",
+            "subject": subj,
+            "answer": f"ceo:{subj}:d{t2_from}:{names[1]}",
+        })
+    return facts, questions
+
+
+def generate_timeline_reconstruction_facts_and_questions(
+    n_subjects: int, seed: int
+) -> tuple[list[dict], list[dict]]:
+    """Ordinal questions over a fixed timeline: 'Who was CEO in the first/second/third term?'"""
+    rng = random.Random(seed)
+    names = ["Alice", "Bob", "Carol"]
+    facts = []
+    questions = []
+    # Terms: Alice 1-20, Bob 21-40, Carol 41-60
+    for i in range(n_subjects):
+        subj = f"timeline_recon_{i}"
+        facts.append({
+            "fact_id": f"tlr_{i}_alice",
+            "content": f"ceo:{subj}:d1:Alice",
+            "t_valid_from": 1,
+            "t_valid_until": 20,
+            "domain": "ceo",
+            "confidence": 1.0,
+            "decay_fn": "none",
+        })
+        facts.append({
+            "fact_id": f"tlr_{i}_bob",
+            "content": f"ceo:{subj}:d21:Bob",
+            "t_valid_from": 21,
+            "t_valid_until": 40,
+            "domain": "ceo",
+            "confidence": 1.0,
+            "decay_fn": "none",
+        })
+        facts.append({
+            "fact_id": f"tlr_{i}_carol",
+            "content": f"ceo:{subj}:d41:Carol",
+            "t_valid_from": 41,
+            "t_valid_until": 60,
+            "domain": "ceo",
+            "confidence": 1.0,
+            "decay_fn": "none",
+        })
+        ordinals = [
+            (10, "first", f"ceo:{subj}:d1:Alice"),
+            (30, "second", f"ceo:{subj}:d21:Bob"),
+            (50, "third", f"ceo:{subj}:d41:Carol"),
+        ]
+        for day, ordinal, answer in ordinals:
+            questions.append({
+                "question_id": f"tlr_q_{i}_{ordinal}",
+                "task_family": "TimelineReconstruction",
+                "prompt": f"Who was CEO of {subj} in the {ordinal} term?",
+                "as_of_day": day,
+                "domain": "ceo",
+                "subject": subj,
+                "answer": answer,
+            })
+    return facts, questions
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Generate adversarial temporal benchmark data.")
     ap.add_argument("--out-dir", type=Path, default=Path("benchmarks"), help="Output directory")
@@ -313,6 +422,8 @@ def main() -> None:
     ap.add_argument("--multi-reversion", type=int, default=5, help="Number of multi-reversion subjects")
     ap.add_argument("--interval-midpoint", type=int, default=5, help="Number of interval-midpoint subjects")
     ap.add_argument("--multi-entity", type=int, default=5, help="Number of multi-entity join pairs")
+    ap.add_argument("--future-fact", type=int, default=5, help="Number of future-fact subjects (who will be CEO?)")
+    ap.add_argument("--timeline-reconstruction", type=int, default=5, help="Number of timeline-reconstruction subjects (first/second/third term)")
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 
@@ -368,6 +479,22 @@ def main() -> None:
         q_id += 1
     all_facts.extend(f6)
     all_questions.extend(q6)
+
+    # Future facts (who will be CEO on day X?)
+    f7, q7 = generate_future_fact_facts_and_questions(args.future_fact, args.seed)
+    for q in q7:
+        q["question_id"] = f"adv_q{q_id}"
+        q_id += 1
+    all_facts.extend(f7)
+    all_questions.extend(q7)
+
+    # Timeline reconstruction (first/second/third term)
+    f8, q8 = generate_timeline_reconstruction_facts_and_questions(args.timeline_reconstruction, args.seed)
+    for q in q8:
+        q["question_id"] = f"adv_q{q_id}"
+        q_id += 1
+    all_facts.extend(f8)
+    all_questions.extend(q8)
 
     facts_path = args.out_dir / "adversarial_temporal_facts.jsonl"
     questions_path = args.out_dir / "adversarial_temporal_questions.jsonl"

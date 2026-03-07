@@ -8,11 +8,25 @@ from typing import Any
 
 # Lazy imports so the rest of the repo can load without torch/transformers
 def _import_training():
-    import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
-    from peft import LoraConfig, get_peft_model, TaskType
-    from datasets import Dataset
-    return torch, AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer, LoraConfig, get_peft_model, TaskType, Dataset
+    try:
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
+        from peft import LoraConfig, get_peft_model, TaskType
+        from datasets import Dataset
+        return torch, AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer, LoraConfig, get_peft_model, TaskType, Dataset
+    except (ImportError, ModuleNotFoundError, RuntimeError) as e:
+        err = str(e).lower()
+        if "torchvision" in err or "nms" in err:
+            raise RuntimeError(
+                "Torch/torchvision version mismatch (e.g. 'operator torchvision::nms does not exist'). "
+                "Fix: pip uninstall -y torchvision (this project does not need it), or reinstall matching pair: "
+                "pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu"
+            ) from e
+        if "3.14" in err or "Python 3" in err:
+            raise RuntimeError(
+                "PyTorch/transformers may not support Python 3.14 yet. Use a venv with Python 3.10, 3.11, or 3.12."
+            ) from e
+        raise
 
 
 def _build_chat_prompt(question: str, template_id: str = "default") -> str:

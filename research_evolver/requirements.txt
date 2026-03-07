@@ -1,7 +1,17 @@
 # Research Evolution v1 — baseline path (train + eval)
 # Install from repo root: pip install -r research_evolver/requirements.txt
+#
+# Python: Use 3.10, 3.11, or 3.12. PyTorch/transformers may not support 3.14 yet.
+#
+# If you see "operator torchvision::nms does not exist": torch and torchvision
+# must match. Either reinstall both together, or uninstall torchvision if you
+# don't need it (this project only needs torch + transformers for causal LM):
+#   pip uninstall -y torchvision
+#   pip install torch transformers ...
+# Or install a matching pair (e.g. CPU):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
-torch>=2.0.0
+torch>=2.0.0,<2.6
 transformers>=4.36.0
 peft>=0.7.0
 datasets>=2.14.0
