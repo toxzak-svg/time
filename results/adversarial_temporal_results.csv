@@ -1,5 +1,5 @@
 system,ReversionAccuracy,N_Reversion,IntervalAccuracy,N_Interval,CausalReasoningAccuracy,N_CausalReasoning,OverallAccuracy,N_total
 A,0.5,30,0.3333,60,0.0,30,0.2917,120
-B,1.0,30,0.8333,60,1.0,30,0.9167,120
-C,1.0,30,0.8333,60,1.0,30,0.9167,120
-D,1.0,30,0.8333,60,1.0,30,0.9167,120
+B,1.0,30,1.0,60,1.0,30,1.0,120
+C,1.0,30,1.0,60,1.0,30,1.0,120
+D,1.0,30,1.0,60,1.0,30,1.0,120

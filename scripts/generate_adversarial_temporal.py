@@ -113,10 +113,16 @@ def generate_interval_facts_and_questions(
             "confidence": 1.0,
             "decay_fn": "none",
         })
-        # Boundary and midpoint queries
-        for day, expected_content in [(10, f"ceo:{subj}:d1:Alice"), (11, f"ceo:{subj}:d21:Bob"),
-                                       (25, f"ceo:{subj}:d21:Bob"), (40, f"ceo:{subj}:d21:Bob"),
-                                       (41, f"ceo:{subj}:d41:Carol"), (55, f"ceo:{subj}:d41:Carol")]:
+        # Boundary and midpoint queries (inclusive: valid iff t_valid_from <= day <= t_valid_until)
+        # Alice 1-20, Bob 21-40, Carol 41-60
+        for day, expected_content in [
+            (10, f"ceo:{subj}:d1:Alice"),   # in [1,20]
+            (11, f"ceo:{subj}:d1:Alice"),   # in [1,20], not Bob
+            (25, f"ceo:{subj}:d21:Bob"),   # in [21,40]
+            (40, f"ceo:{subj}:d21:Bob"),   # in [21,40]
+            (41, f"ceo:{subj}:d41:Carol"), # in [41,60]
+            (55, f"ceo:{subj}:d41:Carol"), # in [41,60]
+        ]:
             questions.append({
                 "question_id": f"int_q_{i}_d{day}",
                 "task_family": "Interval",
