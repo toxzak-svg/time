@@ -80,3 +80,19 @@ From `RESULTS_OVERVIEW.md`:
 | 6 | Update README and optional change-detection questions | Small |
 
 This order closes the main deliverable first, then strengthens the evaluation protocol, then iterates on TTA design and presentation.
+
+---
+
+## 6. Adversarial temporal tasks (optional expansion)
+
+**Reference**: `ADVERSARIAL_TEMPORAL_TASKS.md` — full spec for 7 task types + one “extremely hard” (timeline reconstruction).
+
+- **Current coverage**: v1–v4 already stress interval reasoning, staleness, and some causal trace; reversion appears implicitly via overlapping facts.
+- **Possible extensions** (see mapping table in that doc):
+  - Reversion-focused generator (explicit A→B→A timelines).
+  - Interval-only / midpoint diagnostic set.
+  - Multi-entity join generator (“who was X when Y?”).
+  - Future-fact and “who will be …?” questions.
+  - Timeline reconstruction (relative-order facts only; infer order and answer “who served second?”).
+
+If you add a Colab experiment that highlights TTA vs RAG on these tasks (e.g. reversion or interval in &lt;5 min), it can be linked from the README or from `ADVERSARIAL_TEMPORAL_TASKS.md`.
