@@ -150,11 +150,3 @@ Treat these as preregistered targets:
 - `figures/accuracy_vs_fact_age.png`
 - one-page experimental report with claim + error analysis
 
-## 11) Minimal Reproducible v1 (if time-constrained)
-- single domain only (evolving API docs)
-- 500–1,000 events
-- 300–500 questions
-- systems: Plain RAG vs Time-Constraint Retrieval vs TTA
-- metrics: Temporal Accuracy + Staleness Error + TRS
-
-This is the quickest path to a credible, externally shareable result.

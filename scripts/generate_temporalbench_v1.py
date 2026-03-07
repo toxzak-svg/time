@@ -11,9 +11,18 @@ from pathlib import Path
 from typing import Optional
 
 DOMAINS = {
-    "slow": {"subjects": ["gpu_a", "gpu_b", "disk_sku", "cpu_line"], "update_p": 0.08},
-    "medium": {"subjects": ["api_price", "model_tier", "quota_limit", "feature_flag"], "update_p": 0.22},
-    "fast": {"subjects": ["status_page", "incident_level", "docs_notice", "release_channel"], "update_p": 0.45},
+    "slow": {
+        "subjects": [f"hardware_{i}" for i in range(30)] + [f"spec_{i}" for i in range(30)],
+        "update_p": 0.25
+    },
+    "medium": {
+        "subjects": [f"api_{i}" for i in range(30)] + [f"model_{i}" for i in range(30)] + [f"pricing_{i}" for i in range(20)],
+        "update_p": 0.40
+    },
+    "fast": {
+        "subjects": [f"status_{i}" for i in range(25)] + [f"incident_{i}" for i in range(25)] + [f"docs_{i}" for i in range(20)],
+        "update_p": 0.60
+    },
 }
 
 EVENT_TYPES = ["FACT_OBSERVED", "FACT_SUPERSEDED", "ACTION", "OUTCOME", "POLICY_UPDATE"]
@@ -107,20 +116,88 @@ def generate(days: int, seed: int, question_count: int) -> tuple[list[dict], lis
                     )
                 )
 
+    # Convert facts to dicts for easier processing
+    facts_dict = [asdict(f) for f in facts]
+    
+    # Generate different types of questions
     questions: list[dict] = []
-    for qid in range(1, question_count + 1):
-        f = rng.choice(facts)
-        as_of = rng.randint(f.t_valid_from, f.t_valid_until or days)
-        prompt = f"As of day {as_of}, what was true about {f.content.split(':')[1]} in {f.domain}?"
+    
+    # 1. As-of-time QA questions (60%)
+    asof_count = int(question_count * 0.6)
+    for qid in range(1, asof_count + 1):
+        f = rng.choice(facts_dict)
+        as_of = rng.randint(f["t_valid_from"], f["t_valid_until"] or days)
+        prompt = f"As of day {as_of}, what was true about {f['content'].split(':')[1]} in {f['domain']}?"
         questions.append(
             {
                 "question_id": f"q{qid}",
                 "task_family": "AsOfQA",
                 "prompt": prompt,
                 "as_of_day": as_of,
-                "domain": f.domain,
-                "subject": f.content.split(":")[1],
-                "answer": f.content,
+                "domain": f["domain"],
+                "subject": f["content"].split(":")[1],
+                "answer": f["content"],
+            }
+        )
+
+    # 2. Change detection questions (20%)
+    change_count = int(question_count * 0.2)
+    for qid in range(asof_count + 1, asof_count + change_count + 1):
+        # Pick a subject and find two different facts about it
+        domain = rng.choice(list(DOMAINS.keys()))
+        subject = rng.choice(DOMAINS[domain]["subjects"])
+        subj_facts = [f for f in facts_dict if f["domain"] == domain and f["content"].split(":")[1] == subject]
+        if len(subj_facts) < 2:
+            continue
+        subj_facts_sorted = sorted(subj_facts, key=lambda x: x["t_valid_from"])
+        f1, f2 = rng.sample(subj_facts_sorted[:3], 2)  # Get facts from early/mid timeline
+        early_day = min(f1["t_valid_from"], f2["t_valid_from"])
+        late_day = max(f1["t_valid_from"], f2["t_valid_from"])
+        prompt = f"What changed for {subject} between day {early_day} and day {late_day}?"
+        questions.append(
+            {
+                "question_id": f"q{qid}",
+                "task_family": "ChangeDetection",
+                "prompt": prompt,
+                "start_day": early_day,
+                "end_day": late_day,
+                "domain": domain,
+                "subject": subject,
+                "answer": f"{f1['content']} -> {f2['content']}",
+            }
+        )
+
+    # 3. Causal questions (20%)
+    # Create ACTION/OUTCOME events for causal questions
+    action_outcome_events = []
+    for i in range(len(events) // 10):  # Create ~10% as action/outcome pairs
+        ev = rng.choice(events)
+        if ev.event_type == "FACT_OBSERVED":
+            outcome_day = min(ev.t_event + rng.randint(1, 5), days)
+            action_outcome_events.append({
+                "action_event": ev.event_id,
+                "action_day": ev.t_event,
+                "outcome_day": outcome_day,
+                "domain": ev.domain,
+                "subject": ev.subject,
+            })
+
+    causal_count = question_count - asof_count - change_count
+    for qid in range(asof_count + change_count + 1, question_count + 1):
+        if not action_outcome_events:
+            break
+        ao = rng.choice(action_outcome_events)
+        prompt = f"Which change on day {ao['action_day']} caused the state on day {ao['outcome_day']} for {ao['subject']}?"
+        questions.append(
+            {
+                "question_id": f"q{qid}",
+                "task_family": "CausalQuery",
+                "prompt": prompt,
+                "action_day": ao["action_day"],
+                "outcome_day": ao["outcome_day"],
+                "domain": ao["domain"],
+                "subject": ao["subject"],
+                "answer": ao["action_event"],
             }
         )
 
