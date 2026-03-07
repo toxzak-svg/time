@@ -182,21 +182,24 @@ def main():
     ap.add_argument("--days", type=int, default=60)
     ap.add_argument("--seed", type=int, default=999)
     ap.add_argument("--questions", type=int, default=2000)
+    ap.add_argument("--events-out", default="benchmarks/temporalbench_v4_events.jsonl")
+    ap.add_argument("--facts-out", default="benchmarks/temporalbench_v4_facts.jsonl")
+    ap.add_argument("--questions-out", default="benchmarks/temporalbench_v4_questions.jsonl")
     args = ap.parse_args()
     
     events, facts, questions = generate_v4(args.days, args.seed, args.questions)
     
-    Path("benchmarks").mkdir(exist_ok=True)
+    Path(args.events_out).parent.mkdir(parents=True, exist_ok=True)
     
-    with open("benchmarks/temporalbench_v4_events.jsonl", "w") as f:
+    with open(args.events_out, "w") as f:
         for e in events:
             f.write(json.dumps(e) + "\n")
     
-    with open("benchmarks/temporalbench_v4_facts.jsonl", "w") as f:
+    with open(args.facts_out, "w") as f:
         for fct in facts:
             f.write(json.dumps(fct) + "\n")
     
-    with open("benchmarks/temporalbench_v4_questions.jsonl", "w") as f:
+    with open(args.questions_out, "w") as f:
         for q in questions:
             f.write(json.dumps(q) + "\n")
     
@@ -205,6 +208,7 @@ def main():
         dist[q["task_family"]] = dist.get(q["task_family"], 0) + 1
     print(f"Generated {len(events)} events, {len(facts)} facts, {len(questions)} questions")
     print(f"Distribution: {dist}")
+    print(f"wrote {args.events_out}, {args.facts_out}, {args.questions_out}")
 
 
 if __name__ == "__main__":

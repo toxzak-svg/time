@@ -347,6 +347,7 @@ def evaluate(system: str, facts: list[dict], questions: list[dict], events: list
         "C": retrieve_time_constraint,
         "D": retrieve_tta,
         "D_improved": retrieve_tta_improved,
+        "D_revised": retrieve_tta_improved,  # Validity-only + confidence tiebreak (no decay)
         # Semantic retrieval systems
         "E": retrieve_semantic,
         "E_hybrid": retrieve_semantic_hybrid,

@@ -312,9 +312,39 @@ def main() -> None:
             "subject": ce["subject"],
             "answer": ce["action_event"],
         })
-    
     questions.extend(causal_questions)
-    
+
+    # Change detection (optional): pairs of facts for "what changed between start_day and end_day?"
+    facts_dict = [asdict(f) for f in facts]
+    by_subject: dict[str, list[dict]] = {}
+    for f in facts_dict:
+        subject = f["content"].split(":")[1]
+        by_subject.setdefault(subject, []).append(f)
+    change_rng = random.Random(args.seed + 2000)
+    change_questions = []
+    for _ in range(50):
+        subjects = [s for s, fs in by_subject.items() if len(fs) >= 2]
+        if not subjects:
+            break
+        subject = change_rng.choice(subjects)
+        subj_facts = sorted(by_subject[subject], key=lambda x: x["t_valid_from"])
+        f1, f2 = subj_facts[0], subj_facts[1]
+        early_day, late_day = f1["t_valid_from"], f2["t_valid_from"]
+        if early_day >= late_day:
+            continue
+        domain = f1["domain"]
+        change_questions.append({
+            "question_id": f"q{len(questions)+len(change_questions)+1}",
+            "task_family": "ChangeDetection",
+            "prompt": f"What changed for {subject} between day {early_day} and day {late_day}?",
+            "start_day": early_day,
+            "end_day": late_day,
+            "domain": domain,
+            "subject": subject,
+            "answer": f"{f1['content']} -> {f2['content']}",
+        })
+    questions.extend(change_questions)
+
     random.Random(args.seed).shuffle(questions)
     questions = questions[:args.questions]
 
