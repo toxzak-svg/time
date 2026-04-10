@@ -1,0 +1,5 @@
+# OpenClaw-created self symlinks in workspaces (can break git on Windows)
+agent_city/workspaces/researcher/researcher
+agent_city/workspaces/temporal_citizen/temporal_citizen
+agent_city/workspaces/future_specialist/future_specialist
+agent_city/workspaces/evolver/evolver

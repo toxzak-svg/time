@@ -1,0 +1,10 @@
+project: temporal-tasks
+kernel_slug: zacharymaronek/temporal-tasks
+code_file: adversarial_temporal_colab.ipynb
+accelerator: none
+internet: false
+privacy: private
+datasets: []
+competitions: []
+outputs:
+  download_to: .kaggle-outputs/

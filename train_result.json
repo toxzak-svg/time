@@ -1,0 +1,1 @@
+{"success": true, "result": {"train_runtime": 172.8374, "train_samples_per_second": 0.023, "train_steps_per_second": 0.012, "total_flos": 16128241827840.0, "train_loss": 8.652995109558105, "epoch": 0.02, "step": 2}}
