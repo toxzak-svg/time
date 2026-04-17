@@ -4,3 +4,8 @@ agent_city/workspaces/temporal_citizen/temporal_citizen
 agent_city/workspaces/future_specialist/future_specialist
 agent_city/workspaces/evolver/evolver
 __pycache__/
+
+# Generated benchmark outputs
+benchmarks_expanded/
+results/*.csv
+!results/*.py
