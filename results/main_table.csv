@@ -1,5 +1,4 @@
-system,TemporalAccuracy,StalenessErrorRate,ChangeDetectionF1,CausalTraceAccuracy,TRS,N_AsOf,N_Change,N_Causal
-A,0.03,0.97,1.0,1.0,0.3695,1200,400,400
-B,1.0,0.0,1.0,1.0,1.0,1200,400,400
-C,1.0,0.0,1.0,1.0,1.0,1200,400,400
-D,1.0,0.0,1.0,1.0,1.0,1200,400,400
+system,asof_accuracy,staleness_error_rate,trs_partial,samples
+baseline_a,0.2267,0.7733,0.1474,344
+baseline_c,1.0,0.0,0.65,344
+tta,0.8081,0.1919,0.5253,344
