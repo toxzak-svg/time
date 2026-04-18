@@ -1,6 +1,6 @@
 # time
 
-Concrete experiment specification for evaluating **Temporal Truth Architecture (TTA)** against current time-aware agent baselines is documented in:
+Concrete experiment specification for evaluating **Temporal Truth Architecture (TTA)** against current time-aware agent baselines:
 
 - `EXPERIMENT_PLAN.md`
 

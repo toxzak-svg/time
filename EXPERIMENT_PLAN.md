@@ -82,6 +82,15 @@ Use one shared LLM, one embedding model, and one retrieval budget for all system
 5. **Long-horizon temporal memory**
    - ordering/relative-time queries across 20–100 sessions
 
+### 4b) Adversarial task taxonomy
+
+A fuller set of adversarial temporal tasks (reversion events, interval reasoning, counterfactual/causal questions, multi-entity joins, knowledge mutation stability, drift, future projection, timeline reconstruction) is specified in **`ADVERSARIAL_TEMPORAL_TASKS.md`**. That doc also gives:
+- per-task evaluation metrics
+- a suggested benchmark mix (e.g. 30% interval, 25% reversion, 20% causal, 15% joins, 10% future)
+- an expected results pattern: Plain RAG 35–45%, RAG+LLM 45–60%, Temporal KG 70–85%, TTA 85–95%
+
+Current TemporalBench v1–v4 cover a subset; extending with reversion-focused, join, and timeline-reconstruction generators is described there and in `NEXT_STEPS.md`.
+
 ## 5) Metrics
 ### Primary
 - **Temporal Accuracy** (correct relative to requested time)
@@ -150,11 +159,3 @@ Treat these as preregistered targets:
 - `figures/accuracy_vs_fact_age.png`
 - one-page experimental report with claim + error analysis
 
-## 11) Minimal Reproducible v1 (if time-constrained)
-- single domain only (evolving API docs)
-- 500–1,000 events
-- 300–500 questions
-- systems: Plain RAG vs Time-Constraint Retrieval vs TTA
-- metrics: Temporal Accuracy + Staleness Error + TRS
-
-This is the quickest path to a credible, externally shareable result.
