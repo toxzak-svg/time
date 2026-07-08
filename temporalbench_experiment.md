@@ -92,7 +92,7 @@ Multi-episode policy updates with delayed outcomes:
 
 ### Secondary
 - Latency
-- Retrieval calls/query
+- Retrieval calls per query
 - Token cost
 - Storage overhead
 
