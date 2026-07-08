@@ -1,0 +1,64 @@
+Generation 1 — Stage 1 ranking (by proxy accuracy)
+============================================================
+# Errors (train/eval failed):
+#   gen1_exp001: Could not import module 'Trainer'. Are this object's requirements defined correctly?
+#   gen1_exp002: Could not import module 'Trainer'. Are this object's requirements defined correctly?
+#   gen1_exp003: Could not import module 'Trainer'. Are this object's requirements defined correctly?
+#   gen1_exp004: Could not import module 'Trainer'. Are this object's requirements defined correctly?
+#   gen1_exp005: Could not import module 'Trainer'. Are this object's requirements defined correctly?
+#   gen1_exp006: Could not import module 'Trainer'. Are this object's requirements defined correctly?
+#   gen1_exp007: Could not import module 'Trainer'. Are this object's requirements defined correctly?
+#   gen1_exp008: Could not import module 'Trainer'. Are this object's requirements defined correctly?
+#   gen1_exp009: Could not import module 'Trainer'. Are this object's requirements defined correctly?
+#   gen1_exp010: Could not import module 'Trainer'. Are this object's requirements defined correctly?
+
+gen1_exp001	0.0000
+gen1_exp002	0.0000
+gen1_exp003	0.0000
+gen1_exp004	0.0000
+gen1_exp005	0.0000
+gen1_exp006	0.0000
+gen1_exp007	0.0000
+gen1_exp008	0.0000
+gen1_exp009	0.0000
+gen1_exp010	0.0000
+gen1_exp011	0.0000
+gen1_exp012	0.0000
+gen1_exp013	0.0000
+gen1_exp014	0.0000
+gen1_exp015	0.0000
+gen1_exp016	0.0000
+gen1_exp017	0.0000
+gen1_exp018	0.0000
+gen1_exp019	0.0000
+gen1_exp020	0.0000
+gen1_exp021	0.0000
+gen1_exp022	0.0000
+gen1_exp023	0.0000
+gen1_exp024	0.0000
+gen1_exp025	0.0000
+gen1_exp026	0.0000
+gen1_exp027	0.0000
+gen1_exp028	0.0000
+gen1_exp029	0.0000
+gen1_exp030	0.0000
+gen1_exp031	0.0000
+gen1_exp032	0.0000
+gen1_exp033	0.0000
+gen1_exp034	0.0000
+gen1_exp035	0.0000
+gen1_exp036	0.0000
+gen1_exp037	0.0000
+gen1_exp038	0.0000
+gen1_exp039	0.0000
+gen1_exp040	0.0000
+gen1_exp041	0.0000
+gen1_exp042	0.0000
+gen1_exp043	0.0000
+gen1_exp044	0.0000
+gen1_exp045	0.0000
+gen1_exp046	0.0000
+gen1_exp047	0.0000
+gen1_exp048	0.0000
+gen1_exp049	0.0000
+gen1_exp050	0.0000

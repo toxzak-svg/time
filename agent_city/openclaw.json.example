@@ -1,0 +1,29 @@
+{
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace"
+    },
+    "list": [
+      {
+        "id": "temporal_citizen",
+        "name": "Temporal Citizen",
+        "workspace": "REPO_ROOT/agent_city/workspaces/temporal_citizen"
+      },
+      {
+        "id": "researcher",
+        "name": "Researcher",
+        "workspace": "REPO_ROOT/agent_city/workspaces/researcher"
+      },
+      {
+        "id": "evolver",
+        "name": "Evolver",
+        "workspace": "REPO_ROOT/agent_city/workspaces/evolver"
+      },
+      {
+        "id": "future_specialist",
+        "name": "Future Specialist",
+        "workspace": "REPO_ROOT/agent_city/workspaces/future_specialist"
+      }
+    ]
+  }
+}

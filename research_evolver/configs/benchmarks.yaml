@@ -1,0 +1,32 @@
+# Benchmark config for v1 — one discipline, frozen holdout
+
+discipline: reasoning
+proxy_metric: accuracy
+holdout_metric: accuracy
+
+stage1:
+  train_steps_range: [100, 200]
+  eval_size: 100
+  seeds: 1
+
+stage2:
+  train_steps_range: [400, 800]
+  eval_size: 300
+  seeds: 1
+
+stage3:
+  train_steps: full  # from genome
+  eval_size: 500
+  seeds: 2
+  use_holdout: true
+
+# Promotion: top fraction from stage1 -> stage2, top N from stage2 -> stage3
+promotion:
+  stage1_top_fraction: 0.2   # top 20% to stage2
+  stage2_top_n: 10          # top 10 to stage3
+  min_stage2: 2             # at least 2 to stage2
+  min_stage3: 1             # at least 1 to stage3
+  survivors_for_next_gen: 10 # top N from stage3 used as parents for next gen
+  species_cap: 2            # max survivors per lineage (for diversity)
+  use_crossover: true
+  crossover_fraction: 0.2    # fraction of children from crossover vs mutation
