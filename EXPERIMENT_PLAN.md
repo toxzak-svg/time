@@ -1,147 +1,161 @@
-# Temporal Truth Architecture (TTA) vs Current SOTA: Concrete Benchmark Experiment
+# Temporal Truth Architecture (TTA) vs Current Baselines: Concrete Experiment
 
 ## 1) Hypothesis
-TTA-style agents (truth intervals + immutable event log + domain-adaptive decay) outperform strong modern temporal baselines on:
-- **As-of-time correctness**
-- **Stale-fact avoidance**
-- **Causal traceability of decisions**
+A time-first agent (truth intervals + immutable event log + domain-adaptive decay) will significantly outperform strong non-temporal and temporal-aware baselines on:
+- **as-of-time correctness**,
+- **stale-fact avoidance**,
+- **causal traceability of decisions to outcomes**.
 
-## 2) Systems Under Test
-All systems use the **same** LLM, embedding model, retriever budget, and context window.
+## 2) Systems Compared (same base model stack)
+Use one shared LLM, one embedding model, and one retrieval budget for all systems.
 
-1. **Baseline A — Plain Agentic RAG**
-   - Standard retrieval + generation
-   - Timestamps treated as ordinary metadata
-   - No explicit temporal filtering or decay
+1. **Baseline A — Plain RAG Agent**
+   - ReAct/tool-use agent
+   - vector retrieval only
+   - timestamps as metadata only
+   - no temporal filtering, no decay
 
-2. **Baseline B — Temporal-Aware Retrieval Baseline**
-   - Temporal features in retrieval/reranking
-   - Timeline memory compression/summarization
-   - Optional symbolic date arithmetic for questions
+2. **Baseline B — Temporal-Aware Retrieval Agent**
+   - temporal features in retrieval/reranking
+   - optional timeline summarization
+   - no immutable self-history
 
-3. **Baseline C — Time-Constrained Retrieval Baseline**
-   - Retrieval explicitly filtered by requested time ranges
-   - No immutable self-history
-   - No domain-adaptive belief decay learning
+3. **Baseline C — Time-Constraint Retrieval Agent**
+   - explicit retrieval filter for query time window
+   - no learned domain decay
+   - no policy/event causality model
 
-4. **System D — TTA Agent (Proposed)**
-   - Facts stored as truth intervals
-   - Append-only event log for all decisions/outcomes
-   - Domain-specific confidence decay learned from supersession
-   - Causal policy timeline queries
+4. **System D — TTA Agent (proposed)**
+   - facts as truth intervals
+   - append-only causal event ledger
+   - domain-specific learned confidence decay
+   - policy timeline + causal query layer
 
-## 3) Dataset: Simulated Evolving World (Controlled Ground Truth)
-Generate a **60-day timeline** with contradictory/superseding facts across three update-speed domains:
-- **Slow**: hardware specs
-- **Medium**: model pricing/capabilities
-- **Fast**: incident status/service configs
-
-### Target size
-- ~5,000 events/facts total
-- ~2,000 evaluation questions
+## 3) Dataset Design (TemporalBench-v1)
+### Simulated evolving world
+- **Duration**: 60 simulated days
+- **Domains** (different update rates):
+  - Slow: hardware/spec facts
+  - Medium: model/API pricing + capability updates
+  - Fast: incidents/status/docs changes
+- **Scale target**:
+  - ~5,000 events/facts total
+  - ~2,000 evaluation questions
 
 ### Event schema
 ```json
 {
   "event_id": "...",
+  "t_event": "...",
+  "t_observed": "...",
   "domain": "slow|medium|fast",
-  "timestamp": "day-index or ISO8601",
-  "type": "FACT_OBSERVED|FACT_SUPERSEDED|ACTION|OUTCOME|POLICY_UPDATE",
-  "subject": "ModelX|ServiceY|PolicyZ",
-  "predicate": "price|status|winner|latency",
+  "event_type": "FACT_OBSERVED|FACT_SUPERSEDED|ACTION|OUTCOME|POLICY_UPDATE",
+  "subject": "...",
   "value": "...",
-  "supersedes": "event_id|null",
+  "supersedes": "optional_event_id",
   "source_reliability": 0.0
 }
 ```
 
-### Fact truth model (for TTA)
-- `t_observed`
-- `t_valid_from`
-- `t_valid_until`
-- `domain`
-- `confidence`
-- `decay_fn`
+### Fact schema
+```json
+{
+  "fact_id": "...",
+  "content": "...",
+  "t_valid_from": "...",
+  "t_valid_until": "...",
+  "domain": "...",
+  "confidence": 1.0,
+  "decay_fn": "domain_half_life"
+}
+```
 
-## 4) Task Families (Evaluation)
+## 4) Task Families
 1. **As-of-time QA**
-   - Example: “As of Day 18, what was cheapest?”
-2. **Change Detection**
-   - Example: “What changed between Day 10 and Day 30?”
-3. **Staleness Resistance**
-   - Present semantically similar but invalidated docs
-4. **Causal Self-History**
-   - Ask which earlier policy updates caused later outcomes
-5. **Long-Horizon Temporal Memory**
-   - Multi-session ordering and relative-time reasoning
+   - "As of day 18, what was true about X?"
+2. **Change detection**
+   - "What changed between day 10 and day 30?"
+3. **Staleness resistance**
+   - adversarially include high-similarity but outdated docs
+4. **Causal self-history**
+   - "Which policy change caused outcome Y later?"
+5. **Long-horizon temporal memory**
+   - ordering/relative-time queries across 20–100 sessions
+
+### 4b) Adversarial task taxonomy
+
+A fuller set of adversarial temporal tasks (reversion events, interval reasoning, counterfactual/causal questions, multi-entity joins, knowledge mutation stability, drift, future projection, timeline reconstruction) is specified in **`ADVERSARIAL_TEMPORAL_TASKS.md`**. That doc also gives:
+- per-task evaluation metrics
+- a suggested benchmark mix (e.g. 30% interval, 25% reversion, 20% causal, 15% joins, 10% future)
+- an expected results pattern: Plain RAG 35–45%, RAG+LLM 45–60%, Temporal KG 70–85%, TTA 85–95%
+
+Current TemporalBench v1–v4 cover a subset; extending with reversion-focused, join, and timeline-reconstruction generators is described there and in `NEXT_STEPS.md`.
 
 ## 5) Metrics
 ### Primary
-- **Temporal Accuracy** (correct w.r.t. requested time)
-- **Staleness Error Rate** (uses invalidated facts)
-- **Change Detection F1**
-- **Causal Trace Accuracy** (correct cause chain)
-- **Temporal Calibration Error** (confidence vs age correctness)
+- **Temporal Accuracy** (correct relative to requested time)
+- **Staleness Error Rate** (invalidated fact asserted as current)
+- **Change-Detection F1**
+- **Causal Trace Accuracy**
+- **Temporal Calibration Error** (confidence vs fact age)
 
 ### Secondary
-- Latency
-- Retrieval calls per query
-- Token cost
-- Storage overhead
+- latency
+- token cost
+- retrieval calls
+- storage overhead
 
 ### Headline metric
 **Temporal Reliability Score (TRS)**
 
-```text
-TRS = 0.35 * TemporalAccuracy
-    + 0.25 * (1 - StalenessErrorRate)
-    + 0.20 * ChangeDetectionF1
-    + 0.20 * CausalTraceAccuracy
-```
+\[
+TRS = 0.35\cdot AsOfAcc + 0.30\cdot(1-StaleErr) + 0.20\cdot CausalTraceAcc + 0.15\cdot ChangeF1
+\]
 
-## 6) Train/Test Protocol (Leakage-Safe)
-1. Build world for Days 1–60.
-2. Fit decay parameters on **Days 1–40 only**.
-3. Evaluate on **Days 41–60** only.
-4. Run each system with **3 random seeds**.
-5. Report mean, std, and paired significance tests.
+## 6) Training / Evaluation Protocol
+1. Build all 4 systems with identical underlying model stack.
+2. Split timeline:
+   - **Days 1–40**: fit decay parameters / tune prompts
+   - **Days 41–60**: strict held-out evaluation
+3. Run each system with **3 random seeds**.
+4. Report mean ± std.
+5. Perform paired significance tests (paired t-test + bootstrap CI).
 
-## 7) Critical Ablations (TTA)
-Run TTA with one component removed each:
-- No truth intervals
-- No event log replay
-- No temporal query filter
-- No adaptive decay (global decay only)
-- No decay at all
+## 7) Required Ablations (TTA only)
+Run TTA variants removing one component at a time:
+- no truth intervals
+- no domain-adaptive decay (global decay only)
+- no event log (mutable state only)
+- no temporal query filter
 
-Interpretation:
-- Large drops in as-of accuracy/staleness imply truth interval + decay necessity.
-- Large drop in causal trace accuracy implies event log necessity.
+Goal: show which mechanism drives gains.
 
-## 8) Success Criteria (Publishable)
-- +10 to +20 point temporal accuracy vs Plain RAG
-- ≥50% stale-fact error reduction
-- Clear lead in causal traceability
-- Latency still operationally acceptable
+## 8) Success Criteria (publishable threshold)
+Treat these as preregistered targets:
+- **+10–20 points** Temporal Accuracy vs Plain RAG
+- **>=50% reduction** in Staleness Error Rate vs Plain RAG
+- clear lead in Causal Trace Accuracy vs all baselines
+- latency within acceptable tradeoff (e.g., <=25% increase)
 
-## 9) Fast Execution Plan
-### Week 1 (v1)
-- Single-domain benchmark (API docs drift)
-- 500–1,000 events
-- 300–500 questions
-- Compare: Plain RAG vs Time-filtered vs TTA
+## 9) Fast Execution Plan (2-week sprint)
+### Week 1
+- implement data generator + schemas
+- implement Baselines A/C + TTA core
+- generate v1 corpus (1,000 events, 500 QA)
 
-### Week 2–3 (v2)
-- Add all 3 domains
-- Add multi-session + policy history tasks
-- Run full metrics + ablations + significance
+### Week 2
+- add Baseline B
+- run full 60-day protocol
+- produce tables + core figure:
+  - x-axis: fact age
+  - y-axis: answer accuracy
+  - lines: A/B/C/D
 
-### Week 4
-- Public report + plots + open-source release
+## 10) Deliverables
+- `benchmarks/temporalbench_v1.jsonl`
+- `scripts/run_benchmark.py`
+- `results/main_table.csv`
+- `results/ablation_table.csv`
+- `figures/accuracy_vs_fact_age.png`
+- one-page experimental report with claim + error analysis
 
-## 10) One Figure To Win Attention
-Plot **accuracy vs fact age** for each system:
-- X-axis: age of referenced fact
-- Y-axis: answer correctness
-
-If TTA decays more gracefully with age and has lower stale error, this becomes the signature result.

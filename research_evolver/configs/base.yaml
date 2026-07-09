@@ -1,0 +1,19 @@
+# Research Evolution v1 — base config
+# Locked: one task family, Qwen ~1.5B-1.7B, LoRA, 3-stage funnel
+
+task_family: small_model_reasoning
+base_model: Qwen/Qwen2.5-1.5B-Instruct  # or 1.7B variant
+adaptation: lora
+
+storage:
+  db_path: research_evolver/data/evolver.db
+  artifacts_root: research_evolver/artifacts
+
+evaluation:
+  proxy_eval_size: 200
+  confirmation_eval_size: 500
+  holdout_seeds: [42, 43]
+
+budget:
+  max_gpu_hours_per_generation: 8.0
+  max_runtime_per_experiment_min: 120
